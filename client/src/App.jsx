@@ -80,22 +80,23 @@ function App() {
   const handleAddPayment = (payment) => {
     if (!activeQuincenaId) return;
 
-    const updatedQuincenas = quincenas.map(q => {
-      if (q.id === activeQuincenaId) {
-        if (editingIndex !== null) {
-          // Editar pago existente
-          const updatedPayments = [...q.payments];
-          updatedPayments[editingIndex] = payment;
-          return { ...q, payments: updatedPayments };
-        } else {
-          // Agregar nuevo pago
-          return { ...q, payments: [...q.payments, payment] };
+    setQuincenas(prevQuincenas => {
+      return prevQuincenas.map(q => {
+        if (q.id === activeQuincenaId) {
+          if (editingIndex !== null) {
+            // Editar pago existente
+            const updatedPayments = [...q.payments];
+            updatedPayments[editingIndex] = payment;
+            return { ...q, payments: updatedPayments };
+          } else {
+            // Agregar nuevo pago
+            return { ...q, payments: [...q.payments, payment] };
+          }
         }
-      }
-      return q;
+        return q;
+      });
     });
 
-    setQuincenas(updatedQuincenas);
     setEditingIndex(null);
   };
 
