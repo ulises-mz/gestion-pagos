@@ -8,7 +8,9 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
   const [editFormData, setEditFormData] = useState({ hours: '8', schedule: '', branch: '' });
 
   const longPressTimer = useRef(null);
-  const longPressDelay = 500; // 500ms para activar long press
+  const longPressDelay = 800; // 800ms para activar long press (más largo)
+  const touchStartPos = useRef(null); // Para detectar movimiento
+  const moveThreshold = 10; // Píxeles de movimiento permitidos antes de cancelar
 
   const scheduleOptions = {
     '4': ['8am-12pm', '1pm-5pm', '2pm-6pm'],
@@ -150,10 +152,24 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     setDayDetails(newDayDetails);
   };
 
-  // Long press handlers
-  const handleLongPressStart = (date) => {
+  // Long press handlers con detección de movimiento
+  const handleLongPressStart = (date, event) => {
+    // Guardar posición inicial para detectar movimiento
+    if (event.touches && event.touches[0]) {
+      touchStartPos.current = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY
+      };
+    } else if (event.clientX !== undefined) {
+      touchStartPos.current = {
+        x: event.clientX,
+        y: event.clientY
+      };
+    }
+
     longPressTimer.current = setTimeout(() => {
       openEditModal(date);
+      touchStartPos.current = null;
     }, longPressDelay);
   };
 
@@ -161,6 +177,31 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+    }
+    touchStartPos.current = null;
+  };
+
+  // Detectar movimiento durante el long press
+  const handleLongPressMove = (event) => {
+    if (!touchStartPos.current || !longPressTimer.current) return;
+
+    let currentX, currentY;
+    if (event.touches && event.touches[0]) {
+      currentX = event.touches[0].clientX;
+      currentY = event.touches[0].clientY;
+    } else if (event.clientX !== undefined) {
+      currentX = event.clientX;
+      currentY = event.clientY;
+    } else {
+      return;
+    }
+
+    const deltaX = Math.abs(currentX - touchStartPos.current.x);
+    const deltaY = Math.abs(currentY - touchStartPos.current.y);
+
+    // Si se movió más del threshold, cancelar el long press
+    if (deltaX > moveThreshold || deltaY > moveThreshold) {
+      handleLongPressEnd();
     }
   };
 
@@ -327,10 +368,12 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
                       <div
                         key={date}
                         className={`selected-day-card ${isWeekend ? 'weekend' : ''}`}
-                        onMouseDown={() => handleLongPressStart(date)}
+                        onMouseDown={(e) => handleLongPressStart(date, e)}
                         onMouseUp={handleLongPressEnd}
+                        onMouseMove={handleLongPressMove}
                         onMouseLeave={handleLongPressEnd}
-                        onTouchStart={() => handleLongPressStart(date)}
+                        onTouchStart={(e) => handleLongPressStart(date, e)}
+                        onTouchMove={handleLongPressMove}
                         onTouchEnd={handleLongPressEnd}
                         onTouchCancel={handleLongPressEnd}
                       >
