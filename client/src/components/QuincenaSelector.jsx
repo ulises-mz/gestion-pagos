@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './QuincenaSelector.css';
 
 function QuincenaSelector({ quincenas, onStartNewQuincena, onOpenQuincena, onDeleteQuincena, onDownloadQuincena, viewMode }) {
   const [showNewForm, setShowNewForm] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [userClosedModal, setUserClosedModal] = useState(false);
+
+  // Automáticamente abrir modal si no hay quincenas (primera vez)
+  useEffect(() => {
+    if (quincenas.length === 0 && !userClosedModal) {
+      setShowNewForm(true);
+    }
+  }, [quincenas.length, userClosedModal]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -13,6 +21,21 @@ function QuincenaSelector({ quincenas, onStartNewQuincena, onOpenQuincena, onDel
       setStartDate('');
       setEndDate('');
       setShowNewForm(false);
+      setUserClosedModal(false); // Reset para que vuelva a abrir automáticamente si se borran todas
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowNewForm(false);
+    setUserClosedModal(true); // Marcar que el usuario cerró manualmente
+  };
+
+  const handleToggleModal = () => {
+    if (showNewForm) {
+      handleCloseModal();
+    } else {
+      setShowNewForm(true);
+      setUserClosedModal(false);
     }
   };
 
@@ -31,7 +54,7 @@ function QuincenaSelector({ quincenas, onStartNewQuincena, onOpenQuincena, onDel
         <h2>📚 Historial de Quincenas</h2>
         <button
           className="btn-new-quincena-large"
-          onClick={() => setShowNewForm(!showNewForm)}
+          onClick={handleToggleModal}
         >
           {showNewForm ? '❌ Cancelar' : '➕ Nueva Quincena'}
         </button>
@@ -66,7 +89,7 @@ function QuincenaSelector({ quincenas, onStartNewQuincena, onOpenQuincena, onDel
             </div>
 
             <div className="form-actions">
-              <button type="button" className="btn-cancel-modal" onClick={() => setShowNewForm(false)}>
+              <button type="button" className="btn-cancel-modal" onClick={handleCloseModal}>
                 Cancelar
               </button>
               <button type="submit" className="btn-create-modal">
@@ -82,6 +105,18 @@ function QuincenaSelector({ quincenas, onStartNewQuincena, onOpenQuincena, onDel
           <div className="empty-icon">📋</div>
           <h3>No hay quincenas registradas</h3>
           <p>Crea una nueva quincena para empezar a registrar tus pagos</p>
+          {!showNewForm && (
+            <button
+              className="btn-new-quincena-large"
+              onClick={() => {
+                setShowNewForm(true);
+                setUserClosedModal(false);
+              }}
+              style={{ marginTop: '1.5rem' }}
+            >
+              ➕ Crear Primera Quincena
+            </button>
+          )}
         </div>
       ) : (
         <div className="quincenas-grid">
