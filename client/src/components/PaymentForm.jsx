@@ -3,10 +3,9 @@ import './PaymentForm.css';
 
 function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCancelEdit }) {
   const [selectedDates, setSelectedDates] = useState([]);
-  const [dayDetails, setDayDetails] = useState({}); // Guarda horas y horario por día
-  const [branch, setBranch] = useState('');
+  const [dayDetails, setDayDetails] = useState({}); // Guarda horas, horario y sucursal por día
   const [editingDay, setEditingDay] = useState(null); // Día que se está editando en el modal
-  const [editFormData, setEditFormData] = useState({ hours: '8', schedule: '' });
+  const [editFormData, setEditFormData] = useState({ hours: '8', schedule: '', branch: '' });
 
   const longPressTimer = useRef(null);
   const longPressDelay = 500; // 500ms para activar long press
@@ -80,6 +79,14 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     return (dayOfWeek === 0 || dayOfWeek === 6) ? '8am-1pm' : '7am-4:30pm';
   };
 
+  // Obtener sucursal por defecto según tipo de día
+  const getDefaultBranch = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    // Sábados: H. niños por defecto
+    return dayOfWeek === 6 ? 'H. niños' : '';
+  };
+
   // Toggle selección de fecha
   const handleDateToggle = (date) => {
     setSelectedDates(prev => {
@@ -90,14 +97,16 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
         setDayDetails(newDayDetails);
         return prev.filter(d => d !== date);
       } else {
-        // Agregar día con valores por defecto (incluyendo horario automático)
+        // Agregar día con valores por defecto (incluyendo horario y sucursal automáticos)
         const defaultHours = getDefaultHours(date);
         const defaultSchedule = getDefaultSchedule(date);
+        const defaultBranch = getDefaultBranch(date);
         setDayDetails(prev => ({
           ...prev,
           [date]: {
             hours: defaultHours,
-            schedule: defaultSchedule
+            schedule: defaultSchedule,
+            branch: defaultBranch
           }
         }));
         return [...prev, date];
@@ -112,7 +121,8 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     available.forEach(date => {
       newDayDetails[date] = {
         hours: getDefaultHours(date),
-        schedule: getDefaultSchedule(date)
+        schedule: getDefaultSchedule(date),
+        branch: getDefaultBranch(date)
       };
     });
     setDayDetails(newDayDetails);
@@ -153,14 +163,15 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     setEditingDay(date);
     setEditFormData({
       hours: details.hours,
-      schedule: details.schedule
+      schedule: details.schedule,
+      branch: details.branch
     });
   };
 
   // Cerrar modal
   const closeEditModal = () => {
     setEditingDay(null);
-    setEditFormData({ hours: '8', schedule: '' });
+    setEditFormData({ hours: '8', schedule: '', branch: '' });
   };
 
   // Guardar cambios del modal
@@ -170,11 +181,17 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
       return;
     }
 
+    if (!editFormData.branch) {
+      alert('Selecciona una sucursal');
+      return;
+    }
+
     setDayDetails(prev => ({
       ...prev,
       [editingDay]: {
         hours: editFormData.hours,
-        schedule: editFormData.schedule
+        schedule: editFormData.schedule,
+        branch: editFormData.branch
       }
     }));
 
@@ -189,12 +206,14 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
       return;
     }
 
-    if (!branch) {
-      alert('Selecciona una sucursal');
+    // Validar que todos los días tengan sucursal
+    const missingBranch = selectedDates.some(date => !dayDetails[date]?.branch);
+    if (missingBranch) {
+      alert('Completa la sucursal para todos los días seleccionados');
       return;
     }
 
-    // Crear un pago por cada fecha seleccionada con sus horas específicas
+    // Crear un pago por cada fecha seleccionada con sus detalles específicos
     selectedDates.forEach(date => {
       const details = dayDetails[date];
       const hours = parseFloat(details.hours) || 0;
@@ -206,7 +225,7 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
         hours: hours,
         schedule: details.schedule,
         hourlyRate: hourlyRate,
-        branch: branch,
+        branch: details.branch,
         total: total
       };
 
@@ -216,7 +235,6 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     // Limpiar formulario
     setSelectedDates([]);
     setDayDetails({});
-    setBranch('');
   };
 
   const availableDates = getAvailableDates();
@@ -296,7 +314,7 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
                 <div className="selected-days-list">
                   {selectedDates.map(date => {
                     const { text, isWeekend } = formatDateOption(date);
-                    const details = dayDetails[date] || { hours: '8', schedule: '7am-4:30pm' };
+                    const details = dayDetails[date] || { hours: '8', schedule: '7am-4:30pm', branch: '' };
 
                     return (
                       <div
@@ -331,6 +349,10 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
                             <span className="info-label">🕐 Horario:</span>
                             <span className="info-value">{details.schedule}</span>
                           </div>
+                          <div className="info-row">
+                            <span className="info-label">🏢 Sucursal:</span>
+                            <span className="info-value">{details.branch || 'Sin asignar'}</span>
+                          </div>
                         </div>
 
                         <div className="day-card-summary">
@@ -342,24 +364,6 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
                       </div>
                     );
                   })}
-                </div>
-              </div>
-
-              <div className="branch-section">
-                <div className="form-group">
-                  <label htmlFor="branch">🏢 Sucursal (para todos los días):</label>
-                  <select
-                    id="branch"
-                    name="branch"
-                    value={branch}
-                    onChange={(e) => setBranch(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccionar...</option>
-                    {branchOptions.map(branchOpt => (
-                      <option key={branchOpt} value={branchOpt}>{branchOpt}</option>
-                    ))}
-                  </select>
                 </div>
               </div>
 
@@ -425,6 +429,19 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
                   <option value="">Seleccionar...</option>
                   {scheduleOptions[editFormData.hours]?.map(schedule => (
                     <option key={schedule} value={schedule}>{schedule}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-form-group">
+                <label>🏢 Sucursal:</label>
+                <select
+                  value={editFormData.branch}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, branch: e.target.value }))}
+                >
+                  <option value="">Seleccionar...</option>
+                  {branchOptions.map(branchOpt => (
+                    <option key={branchOpt} value={branchOpt}>{branchOpt}</option>
                   ))}
                 </select>
               </div>
