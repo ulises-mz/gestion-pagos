@@ -133,6 +133,29 @@
   font-size: 0.85rem;
 }
 
+.quincena-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-download-quincena {
+  background: rgba(40, 167, 69, 0.9);
+  color: white;
+  border: 2px solid white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-download-quincena:hover {
+  background: #28a745;
+  transform: translateY(-2px);
+}
+
 .btn-close-quincena {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -205,6 +228,29 @@
   font-size: 0.8rem;
 }
 
+.quincena-item-actions {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.btn-download-mini {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.3rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.btn-download-mini:hover {
+  background: #e8f5e9;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 .btn-delete-mini {
   background: none;
   border: none;
@@ -254,6 +300,12 @@
     justify-content: center;
   }
 
+  .quincena-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .btn-download-quincena,
   .btn-close-quincena {
     width: 100%;
   }

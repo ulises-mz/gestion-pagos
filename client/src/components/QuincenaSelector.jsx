@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './QuincenaSelector.css';
 
-function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSelectQuincena, onDeleteQuincena, onCloseQuincena }) {
+function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSelectQuincena, onDeleteQuincena, onCloseQuincena, onDownloadQuincena }) {
   const [showNewForm, setShowNewForm] = useState(!quincenas.length);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -81,17 +81,28 @@ function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSel
             <span className="quincena-dates">{formatDateRange(activeQuincena.startDate, activeQuincena.endDate)}</span>
             <span className="quincena-stats">{activeQuincena.payments.length} registros</span>
           </div>
-          {activeQuincena.payments.length > 0 && (
-            <button className="btn-close-quincena" onClick={onCloseQuincena}>
-              ✓ Cerrar Quincena
-            </button>
-          )}
+          <div className="quincena-actions">
+            {activeQuincena.payments.length > 0 && (
+              <>
+                <button
+                  className="btn-download-quincena"
+                  onClick={() => onDownloadQuincena(activeQuincena.id)}
+                  title="Descargar CSV"
+                >
+                  📥 Descargar
+                </button>
+                <button className="btn-close-quincena" onClick={onCloseQuincena}>
+                  ← Ir al Historial
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
-      {sortedQuincenas.length > 1 && (
+      {sortedQuincenas.length > 0 && (activeQuincenaId ? sortedQuincenas.length > 1 : true) && (
         <div className="quincenas-history">
-          <h3>📚 Historial</h3>
+          <h3>📚 Historial de Quincenas</h3>
           <div className="quincenas-list">
             {sortedQuincenas
               .filter(q => q.id !== activeQuincenaId)
@@ -104,16 +115,30 @@ function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSel
                     <span className="quincena-dates">{formatDateRange(quincena.startDate, quincena.endDate)}</span>
                     <span className="quincena-stats">{quincena.payments.length} registros</span>
                   </div>
-                  <button
-                    className="btn-delete-mini"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteQuincena(quincena.id);
-                    }}
-                    title="Eliminar"
-                  >
-                    🗑️
-                  </button>
+                  <div className="quincena-item-actions">
+                    {quincena.payments.length > 0 && (
+                      <button
+                        className="btn-download-mini"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDownloadQuincena(quincena.id);
+                        }}
+                        title="Descargar CSV"
+                      >
+                        📥
+                      </button>
+                    )}
+                    <button
+                      className="btn-delete-mini"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteQuincena(quincena.id);
+                      }}
+                      title="Eliminar"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               ))}
           </div>

@@ -17,11 +17,20 @@ function App() {
     const savedActiveId = localStorage.getItem('activeQuincenaId');
 
     if (savedQuincenas) {
-      setQuincenas(JSON.parse(savedQuincenas));
-    }
+      const parsedQuincenas = JSON.parse(savedQuincenas);
+      setQuincenas(parsedQuincenas);
 
-    if (savedActiveId) {
-      setActiveQuincenaId(savedActiveId);
+      // Validar que la quincena activa existe
+      if (savedActiveId && savedActiveId !== 'null') {
+        const quincenaExists = parsedQuincenas.some(q => q.id === savedActiveId);
+        if (quincenaExists) {
+          setActiveQuincenaId(savedActiveId);
+        } else {
+          // Si no existe, limpiar
+          setActiveQuincenaId(null);
+          localStorage.removeItem('activeQuincenaId');
+        }
+      }
     }
   }, []);
 
@@ -29,6 +38,9 @@ function App() {
   useEffect(() => {
     if (quincenas.length > 0) {
       localStorage.setItem('quincenas', JSON.stringify(quincenas));
+    } else {
+      // Si no hay quincenas, limpiar localStorage
+      localStorage.removeItem('quincenas');
     }
   }, [quincenas]);
 
@@ -36,6 +48,8 @@ function App() {
   useEffect(() => {
     if (activeQuincenaId) {
       localStorage.setItem('activeQuincenaId', activeQuincenaId);
+    } else {
+      localStorage.removeItem('activeQuincenaId');
     }
   }, [activeQuincenaId]);
 
@@ -125,12 +139,61 @@ function App() {
     }
   };
 
-  // Cerrar quincena (archivar)
+  // Cerrar quincena (ir al historial)
   const handleCloseQuincena = () => {
-    if (window.confirm('¿Deseas cerrar esta quincena y crear una nueva?')) {
-      setActiveQuincenaId(null);
-      setEditingIndex(null);
-    }
+    setActiveQuincenaId(null);
+    setEditingIndex(null);
+  };
+
+  // Descargar desglose de quincena en CSV
+  const handleDownloadQuincena = (quincenaId) => {
+    const quincena = quincenas.find(q => q.id === quincenaId);
+    if (!quincena) return;
+
+    // Preparar datos para CSV
+    const formatDate = (dateString) => {
+      const date = new Date(dateString + 'T00:00:00');
+      const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      return `${dayNames[date.getDay()]} ${date.toLocaleDateString('es-ES')}`;
+    };
+
+    // Ordenar pagos por fecha
+    const sortedPayments = [...quincena.payments].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Crear contenido CSV
+    let csvContent = '\uFEFF'; // BOM para UTF-8
+    csvContent += `REGISTRO DE PAGOS QUINCENAL\n`;
+    csvContent += `Período:,${new Date(quincena.startDate).toLocaleDateString('es-ES')} - ${new Date(quincena.endDate).toLocaleDateString('es-ES')}\n`;
+    csvContent += `\n`;
+    csvContent += `Día,Fecha,Horas,Horario,Valor x Hora (₡),Sucursal,Total (₡)\n`;
+
+    // Agregar cada pago
+    sortedPayments.forEach(payment => {
+      csvContent += `${formatDate(payment.date)},${new Date(payment.date).toLocaleDateString('es-ES')},${payment.hours},${payment.schedule},"${payment.hourlyRate.toLocaleString('es-CR')}",${payment.branch},"${payment.total.toLocaleString('es-CR')}"\n`;
+    });
+
+    // Totales
+    const totalHours = sortedPayments.reduce((sum, p) => sum + p.hours, 0);
+    const totalAmount = sortedPayments.reduce((sum, p) => sum + p.total, 0);
+
+    csvContent += `\n`;
+    csvContent += `TOTALES:,,${totalHours},,,,"${totalAmount.toLocaleString('es-CR')}"\n`;
+    csvContent += `\n`;
+    csvContent += `Días laborados:,${sortedPayments.length}\n`;
+
+    // Crear y descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    const fileName = `Quincena_${new Date(quincena.startDate).toLocaleDateString('es-ES').replace(/\//g, '-')}_${new Date(quincena.endDate).toLocaleDateString('es-ES').replace(/\//g, '-')}.csv`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -147,6 +210,7 @@ function App() {
           onSelectQuincena={handleSelectQuincena}
           onDeleteQuincena={handleDeleteQuincena}
           onCloseQuincena={handleCloseQuincena}
+          onDownloadQuincena={handleDownloadQuincena}
         />
 
         {activeQuincena && (
