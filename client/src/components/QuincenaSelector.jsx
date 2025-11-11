@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import './QuincenaSelector.css';
 
-function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSelectQuincena, onDeleteQuincena, onCloseQuincena, onDownloadQuincena }) {
-  const [showNewForm, setShowNewForm] = useState(!quincenas.length);
+function QuincenaSelector({ quincenas, onStartNewQuincena, onOpenQuincena, onDeleteQuincena, onDownloadQuincena, viewMode }) {
+  const [showNewForm, setShowNewForm] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  const activeQuincena = quincenas.find(q => q.id === activeQuincenaId);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (startDate && endDate) {
-      onCreateQuincena(startDate, endDate);
+      onStartNewQuincena(startDate, endDate);
       setStartDate('');
       setEndDate('');
       setShowNewForm(false);
@@ -28,24 +26,24 @@ function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSel
   const sortedQuincenas = [...quincenas].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
-    <div className="quincena-selector">
-      <div className="selector-header">
-        <h2>📅 Quincenas</h2>
-        {activeQuincena && (
-          <button
-            className="btn-new-quincena"
-            onClick={() => setShowNewForm(!showNewForm)}
-          >
-            {showNewForm ? '❌ Cancelar' : '➕ Nueva Quincena'}
-          </button>
-        )}
+    <div className="quincena-selector-history">
+      <div className="history-header">
+        <h2>📚 Historial de Quincenas</h2>
+        <button
+          className="btn-new-quincena-large"
+          onClick={() => setShowNewForm(!showNewForm)}
+        >
+          {showNewForm ? '❌ Cancelar' : '➕ Nueva Quincena'}
+        </button>
       </div>
 
       {showNewForm && (
-        <form onSubmit={handleSubmit} className="new-quincena-form">
-          <div className="form-inline">
+        <div className="new-quincena-modal">
+          <form onSubmit={handleSubmit} className="new-quincena-form-modal">
+            <h3>Crear Nueva Quincena</h3>
+
             <div className="form-group">
-              <label htmlFor="startDate">Inicio:</label>
+              <label htmlFor="startDate">Fecha de inicio:</label>
               <input
                 type="date"
                 id="startDate"
@@ -56,7 +54,7 @@ function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSel
             </div>
 
             <div className="form-group">
-              <label htmlFor="endDate">Fin:</label>
+              <label htmlFor="endDate">Fecha de fin:</label>
               <input
                 type="date"
                 id="endDate"
@@ -67,81 +65,74 @@ function QuincenaSelector({ quincenas, activeQuincenaId, onCreateQuincena, onSel
               />
             </div>
 
-            <button type="submit" className="btn-create">
-              ✓ Crear
-            </button>
-          </div>
-        </form>
-      )}
-
-      {activeQuincena && (
-        <div className="active-quincena">
-          <div className="quincena-info">
-            <span className="quincena-badge">Activa</span>
-            <span className="quincena-dates">{formatDateRange(activeQuincena.startDate, activeQuincena.endDate)}</span>
-            <span className="quincena-stats">{activeQuincena.payments.length} registros</span>
-          </div>
-          <div className="quincena-actions">
-            {activeQuincena.payments.length > 0 && (
-              <>
-                <button
-                  className="btn-download-quincena"
-                  onClick={() => onDownloadQuincena(activeQuincena.id)}
-                  title="Descargar CSV"
-                >
-                  📥 Descargar
-                </button>
-                <button className="btn-close-quincena" onClick={onCloseQuincena}>
-                  ← Ir al Historial
-                </button>
-              </>
-            )}
-          </div>
+            <div className="form-actions">
+              <button type="button" className="btn-cancel-modal" onClick={() => setShowNewForm(false)}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn-create-modal">
+                ✓ Crear Quincena
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {sortedQuincenas.length > 0 && (activeQuincenaId ? sortedQuincenas.length > 1 : true) && (
-        <div className="quincenas-history">
-          <h3>📚 Historial de Quincenas</h3>
-          <div className="quincenas-list">
-            {sortedQuincenas
-              .filter(q => q.id !== activeQuincenaId)
-              .map(quincena => (
-                <div key={quincena.id} className="quincena-item">
-                  <div
-                    className="quincena-item-content"
-                    onClick={() => onSelectQuincena(quincena.id)}
-                  >
-                    <span className="quincena-dates">{formatDateRange(quincena.startDate, quincena.endDate)}</span>
-                    <span className="quincena-stats">{quincena.payments.length} registros</span>
+      {sortedQuincenas.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">📋</div>
+          <h3>No hay quincenas registradas</h3>
+          <p>Crea una nueva quincena para empezar a registrar tus pagos</p>
+        </div>
+      ) : (
+        <div className="quincenas-grid">
+          {sortedQuincenas.map(quincena => (
+            <div key={quincena.id} className="quincena-card">
+              <div
+                className="quincena-card-content"
+                onClick={() => onOpenQuincena(quincena.id)}
+              >
+                <div className="quincena-card-header">
+                  <span className="quincena-period">{formatDateRange(quincena.startDate, quincena.endDate)}</span>
+                </div>
+                <div className="quincena-card-stats">
+                  <div className="stat-item">
+                    <span className="stat-label">Días:</span>
+                    <span className="stat-value">{quincena.payments.length}</span>
                   </div>
-                  <div className="quincena-item-actions">
-                    {quincena.payments.length > 0 && (
-                      <button
-                        className="btn-download-mini"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDownloadQuincena(quincena.id);
-                        }}
-                        title="Descargar CSV"
-                      >
-                        📥
-                      </button>
-                    )}
-                    <button
-                      className="btn-delete-mini"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteQuincena(quincena.id);
-                      }}
-                      title="Eliminar"
-                    >
-                      🗑️
-                    </button>
+                  <div className="stat-item">
+                    <span className="stat-label">Total:</span>
+                    <span className="stat-value">
+                      ₡{quincena.payments.reduce((sum, p) => sum + p.total, 0).toLocaleString('es-CR')}
+                    </span>
                   </div>
                 </div>
-              ))}
-          </div>
+              </div>
+              <div className="quincena-card-actions">
+                {quincena.payments.length > 0 && (
+                  <button
+                    className="btn-download-card"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownloadQuincena(quincena.id);
+                    }}
+                    title="Descargar CSV"
+                  >
+                    📥 Descargar
+                  </button>
+                )}
+                <button
+                  className="btn-delete-card"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteQuincena(quincena.id);
+                  }}
+                  title="Eliminar"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
