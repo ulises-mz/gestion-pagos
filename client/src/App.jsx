@@ -5,30 +5,87 @@ import PaymentForm from './components/PaymentForm';
 import PaymentTable from './components/PaymentTable';
 import Summary from './components/Summary';
 
+// Configurar URL base de la API
+const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost/gestion-pagos/api';
+
 function App() {
   // Sistema de quincenas con historial
   const [quincenas, setQuincenas] = useState([]);
   const [view, setView] = useState('history'); // 'history' | 'edit'
   const [workingQuincena, setWorkingQuincena] = useState(null); // Quincena temporal en edición
   const [editingIndex, setEditingIndex] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Cargar quincenas del localStorage al inicio
+  // Cargar quincenas desde el servidor al inicio
   useEffect(() => {
-    const savedQuincenas = localStorage.getItem('quincenas');
-    if (savedQuincenas) {
-      const parsedQuincenas = JSON.parse(savedQuincenas);
-      setQuincenas(parsedQuincenas);
-    }
+    loadQuincenas();
   }, []);
 
-  // Guardar quincenas en localStorage cuando cambien
-  useEffect(() => {
-    if (quincenas.length > 0) {
-      localStorage.setItem('quincenas', JSON.stringify(quincenas));
-    } else {
-      localStorage.removeItem('quincenas');
+  // Función para cargar quincenas desde la API
+  const loadQuincenas = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE_URL}/load.php`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al cargar los datos');
+      }
+
+      const data = await response.json();
+      setQuincenas(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar quincenas:', err);
+      setError('No se pudieron cargar los datos. Verifica tu conexión.');
+      // Fallback a localStorage si falla la API
+      const savedQuincenas = localStorage.getItem('quincenas');
+      if (savedQuincenas) {
+        setQuincenas(JSON.parse(savedQuincenas));
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [quincenas]);
+  };
+
+  // Función para guardar quincenas en la API
+  const saveQuincenas = async (newQuincenas) => {
+    try {
+      setSaving(true);
+
+      const response = await fetch(`${API_BASE_URL}/save.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newQuincenas),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al guardar los datos');
+      }
+
+      const result = await response.json();
+      console.log('Datos guardados:', result);
+
+      // También guardar en localStorage como backup
+      localStorage.setItem('quincenas', JSON.stringify(newQuincenas));
+    } catch (err) {
+      console.error('Error al guardar quincenas:', err);
+      // Intentar guardar en localStorage como fallback
+      localStorage.setItem('quincenas', JSON.stringify(newQuincenas));
+      alert('Advertencia: Los datos se guardaron localmente, pero no en el servidor. Verifica tu conexión.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Iniciar creación de nueva quincena
   const handleStartNewQuincena = (startDate, endDate) => {
@@ -55,23 +112,29 @@ function App() {
   };
 
   // Guardar quincena (nueva o editada) y volver al historial
-  const handleSaveQuincena = () => {
+  const handleSaveQuincena = async () => {
     if (!workingQuincena) return;
 
-    setQuincenas(prevQuincenas => {
+    const updatedQuincenas = (() => {
       // Verificar si la quincena ya existe
-      const existingIndex = prevQuincenas.findIndex(q => q.id === workingQuincena.id);
+      const existingIndex = quincenas.findIndex(q => q.id === workingQuincena.id);
 
       if (existingIndex >= 0) {
         // Actualizar quincena existente
-        const updated = [...prevQuincenas];
+        const updated = [...quincenas];
         updated[existingIndex] = workingQuincena;
         return updated;
       } else {
         // Agregar nueva quincena
-        return [...prevQuincenas, workingQuincena];
+        return [...quincenas, workingQuincena];
       }
-    });
+    })();
+
+    // Guardar en el servidor
+    await saveQuincenas(updatedQuincenas);
+
+    // Actualizar estado local
+    setQuincenas(updatedQuincenas);
 
     // Volver al historial
     setWorkingQuincena(null);
@@ -130,9 +193,11 @@ function App() {
   };
 
   // Eliminar quincena del historial
-  const handleDeleteQuincena = (quincenaId) => {
+  const handleDeleteQuincena = async (quincenaId) => {
     if (window.confirm('¿Estás seguro de eliminar esta quincena? Se perderán todos los registros.')) {
-      setQuincenas(prevQuincenas => prevQuincenas.filter(q => q.id !== quincenaId));
+      const updatedQuincenas = quincenas.filter(q => q.id !== quincenaId);
+      await saveQuincenas(updatedQuincenas);
+      setQuincenas(updatedQuincenas);
     }
   };
 
@@ -187,10 +252,49 @@ function App() {
     document.body.removeChild(link);
   };
 
+  // Mostrar estado de carga
+  if (loading) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>💰 Gestión de Pagos</h1>
+        </header>
+        <div className="app-container">
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <p>Cargando datos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si hubo problemas al cargar
+  if (error && quincenas.length === 0) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <h1>💰 Gestión de Pagos</h1>
+        </header>
+        <div className="app-container">
+          <div className="error-state">
+            <div className="error-icon">⚠️</div>
+            <h3>Error al cargar los datos</h3>
+            <p>{error}</p>
+            <button className="btn-retry" onClick={loadQuincenas}>
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>💰 Gestión de Pagos</h1>
+        {saving && <span className="saving-indicator">Guardando...</span>}
       </header>
 
       <div className="app-container">
@@ -238,8 +342,12 @@ function App() {
 
                 {workingQuincena.payments.length > 0 && (
                   <div className="save-section">
-                    <button className="btn-save-quincena" onClick={handleSaveQuincena}>
-                      ✓ Guardar Quincena
+                    <button
+                      className="btn-save-quincena"
+                      onClick={handleSaveQuincena}
+                      disabled={saving}
+                    >
+                      {saving ? 'Guardando...' : '✓ Guardar Quincena'}
                     </button>
                   </div>
                 )}

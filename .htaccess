@@ -1,0 +1,26 @@
+# Configuración para Hostinger
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Permitir acceso a archivos de API
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^ - [L]
+
+    # Redirigir todas las demás peticiones al index.html de React
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ /index.html [L]
+</IfModule>
+
+# Configurar permisos para el archivo de datos
+<FilesMatch "quincenas\.json">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Permitir CORS para desarrollo local
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
