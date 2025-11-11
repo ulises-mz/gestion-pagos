@@ -3,11 +3,8 @@ import './PaymentForm.css';
 
 function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCancelEdit }) {
   const [selectedDates, setSelectedDates] = useState([]);
-  const [formData, setFormData] = useState({
-    hours: '8',
-    schedule: '',
-    branch: ''
-  });
+  const [dayDetails, setDayDetails] = useState({}); // Guarda horas y horario por día
+  const [branch, setBranch] = useState('');
 
   const scheduleOptions = {
     '4': ['8am-12pm', '1pm-5pm', '2pm-6pm'],
@@ -73,8 +70,21 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
   const handleDateToggle = (date) => {
     setSelectedDates(prev => {
       if (prev.includes(date)) {
+        // Remover día y sus detalles
+        const newDayDetails = { ...dayDetails };
+        delete newDayDetails[date];
+        setDayDetails(newDayDetails);
         return prev.filter(d => d !== date);
       } else {
+        // Agregar día con valores por defecto
+        const defaultHours = getDefaultHours(date);
+        setDayDetails(prev => ({
+          ...prev,
+          [date]: {
+            hours: defaultHours,
+            schedule: ''
+          }
+        }));
         return [...prev, date];
       }
     });
@@ -83,21 +93,41 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
   // Seleccionar todos
   const handleSelectAll = () => {
     const available = getAvailableDates();
+    const newDayDetails = {};
+    available.forEach(date => {
+      newDayDetails[date] = {
+        hours: getDefaultHours(date),
+        schedule: ''
+      };
+    });
+    setDayDetails(newDayDetails);
     setSelectedDates(available);
   };
 
   // Deseleccionar todos
   const handleDeselectAll = () => {
     setSelectedDates([]);
+    setDayDetails({});
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+  // Actualizar detalles de un día específico
+  const handleDayDetailChange = (date, field, value) => {
+    setDayDetails(prev => ({
       ...prev,
-      [name]: value,
-      ...(name === 'hours' && { schedule: '' })
+      [date]: {
+        ...prev[date],
+        [field]: value,
+        ...(field === 'hours' && { schedule: '' }) // Reset schedule si cambian horas
+      }
     }));
+  };
+
+  // Remover un día de la selección
+  const handleRemoveDay = (date) => {
+    setSelectedDates(prev => prev.filter(d => d !== date));
+    const newDayDetails = { ...dayDetails };
+    delete newDayDetails[date];
+    setDayDetails(newDayDetails);
   };
 
   const handleSubmit = (e) => {
@@ -108,18 +138,31 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
       return;
     }
 
-    // Crear un pago por cada fecha seleccionada
+    if (!branch) {
+      alert('Selecciona una sucursal');
+      return;
+    }
+
+    // Validar que todos los días tengan horario
+    const missingSchedule = selectedDates.some(date => !dayDetails[date]?.schedule);
+    if (missingSchedule) {
+      alert('Completa el horario para todos los días seleccionados');
+      return;
+    }
+
+    // Crear un pago por cada fecha seleccionada con sus horas específicas
     selectedDates.forEach(date => {
-      const hours = parseFloat(formData.hours) || 0;
+      const details = dayDetails[date];
+      const hours = parseFloat(details.hours) || 0;
       const hourlyRate = getHourlyRate(date);
       const total = hours * hourlyRate;
 
       const payment = {
         date: date,
         hours: hours,
-        schedule: formData.schedule,
+        schedule: details.schedule,
         hourlyRate: hourlyRate,
-        branch: formData.branch,
+        branch: branch,
         total: total
       };
 
@@ -128,28 +171,30 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
 
     // Limpiar formulario
     setSelectedDates([]);
-    setFormData({
-      hours: '8',
-      schedule: '',
-      branch: ''
-    });
+    setDayDetails({});
+    setBranch('');
   };
 
   const availableDates = getAvailableDates();
 
-  // Calcular preview total
+  // Calcular preview total sumando horas individuales
   const calculateTotalPreview = () => {
-    if (selectedDates.length === 0 || !formData.hours) return null;
+    if (selectedDates.length === 0) return null;
 
-    const hours = parseFloat(formData.hours);
+    let totalHours = 0;
     let totalAmount = 0;
 
     selectedDates.forEach(date => {
-      const rate = getHourlyRate(date);
-      totalAmount += hours * rate;
+      const details = dayDetails[date];
+      if (details) {
+        const hours = parseFloat(details.hours) || 0;
+        const rate = getHourlyRate(date);
+        totalHours += hours;
+        totalAmount += hours * rate;
+      }
     });
 
-    return { totalDays: selectedDates.length, totalHours: hours * selectedDates.length, totalAmount };
+    return { totalDays: selectedDates.length, totalHours, totalAmount };
   };
 
   const preview = calculateTotalPreview();
@@ -202,51 +247,80 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
 
           {selectedDates.length > 0 && (
             <>
-              <div className="form-inputs">
-                <div className="form-group">
-                  <label htmlFor="hours">⏰ Horas:</label>
-                  <select
-                    id="hours"
-                    name="hours"
-                    value={formData.hours}
-                    onChange={handleChange}
-                    required
-                  >
-                    {Object.keys(scheduleOptions).map(hours => (
-                      <option key={hours} value={hours}>{hours}h</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="selected-days-section">
+                <h3>✏️ Edita las horas de cada día:</h3>
+                <div className="selected-days-list">
+                  {selectedDates.map(date => {
+                    const { text, isWeekend } = formatDateOption(date);
+                    const details = dayDetails[date] || { hours: '8', schedule: '' };
 
-                <div className="form-group">
-                  <label htmlFor="schedule">🕐 Horario:</label>
-                  <select
-                    id="schedule"
-                    name="schedule"
-                    value={formData.schedule}
-                    onChange={handleChange}
-                    required
-                    disabled={!formData.hours}
-                  >
-                    <option value="">Seleccionar...</option>
-                    {formData.hours && scheduleOptions[formData.hours]?.map(schedule => (
-                      <option key={schedule} value={schedule}>{schedule}</option>
-                    ))}
-                  </select>
-                </div>
+                    return (
+                      <div key={date} className={`selected-day-card ${isWeekend ? 'weekend' : ''}`}>
+                        <div className="day-card-header">
+                          <span className="day-name-selected">{text}</span>
+                          <button
+                            type="button"
+                            className="btn-remove-day"
+                            onClick={() => handleRemoveDay(date)}
+                          >
+                            ✕
+                          </button>
+                        </div>
 
+                        <div className="day-card-inputs">
+                          <div className="day-input-group">
+                            <label>⏰ Horas:</label>
+                            <select
+                              value={details.hours}
+                              onChange={(e) => handleDayDetailChange(date, 'hours', e.target.value)}
+                              required
+                            >
+                              {Object.keys(scheduleOptions).map(hours => (
+                                <option key={hours} value={hours}>{hours}h</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="day-input-group">
+                            <label>🕐 Horario:</label>
+                            <select
+                              value={details.schedule}
+                              onChange={(e) => handleDayDetailChange(date, 'schedule', e.target.value)}
+                              required
+                            >
+                              <option value="">Seleccionar...</option>
+                              {scheduleOptions[details.hours]?.map(schedule => (
+                                <option key={schedule} value={schedule}>{schedule}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="day-card-summary">
+                          <span className="day-rate">₡{getHourlyRate(date).toLocaleString()}/h</span>
+                          <span className="day-total">
+                            ₡{(parseFloat(details.hours) * getHourlyRate(date)).toLocaleString('es-CR')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="branch-section">
                 <div className="form-group">
-                  <label htmlFor="branch">🏢 Sucursal:</label>
+                  <label htmlFor="branch">🏢 Sucursal (para todos los días):</label>
                   <select
                     id="branch"
                     name="branch"
-                    value={formData.branch}
-                    onChange={handleChange}
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
                     required
                   >
                     <option value="">Seleccionar...</option>
-                    {branchOptions.map(branch => (
-                      <option key={branch} value={branch}>{branch}</option>
+                    {branchOptions.map(branchOpt => (
+                      <option key={branchOpt} value={branchOpt}>{branchOpt}</option>
                     ))}
                   </select>
                 </div>

@@ -125,6 +125,139 @@
   font-weight: bold;
 }
 
+.selected-days-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.selected-days-section h3 {
+  color: #8b2053;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+
+.selected-days-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.selected-day-card {
+  background: white;
+  border: 2px solid #f8b4d9;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.selected-day-card.weekend {
+  background: linear-gradient(135deg, #fff5fb 0%, #ffe8f5 100%);
+  border-color: #ff9ecc;
+}
+
+.selected-day-card:hover {
+  box-shadow: 0 3px 10px rgba(248, 180, 217, 0.2);
+  transform: translateX(3px);
+}
+
+.day-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(248, 180, 217, 0.3);
+}
+
+.day-name-selected {
+  font-weight: 700;
+  color: #8b2053;
+  font-size: 1rem;
+}
+
+.btn-remove-day {
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.btn-remove-day:hover {
+  background: #ffebee;
+  transform: scale(1.2);
+}
+
+.day-card-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.day-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.day-input-group label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.day-input-group select {
+  padding: 0.5rem;
+  border: 2px solid #ffd4e9;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.day-input-group select:focus {
+  outline: none;
+  border-color: #f8b4d9;
+  box-shadow: 0 0 0 3px rgba(248, 180, 217, 0.1);
+}
+
+.day-card-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(248, 180, 217, 0.3);
+}
+
+.day-rate {
+  font-size: 0.85rem;
+  color: #8b2053;
+  font-weight: 600;
+}
+
+.day-total {
+  font-size: 1rem;
+  color: #8b2053;
+  font-weight: 700;
+}
+
+.branch-section {
+  margin-bottom: 1.5rem;
+}
+
+.branch-section .form-group {
+  margin-bottom: 0;
+}
+
 .form-inputs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -251,5 +384,13 @@
   .btn-select-all,
   .btn-deselect-all {
     flex: 1;
+  }
+
+  .day-card-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .selected-days-list {
+    max-height: 300px;
   }
 }
