@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import './PaymentForm.css';
 
 function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCancelEdit }) {
   const [selectedDates, setSelectedDates] = useState([]);
   const [dayDetails, setDayDetails] = useState({}); // Guarda horas y horario por día
   const [branch, setBranch] = useState('');
+  const [editingDay, setEditingDay] = useState(null); // Día que se está editando en el modal
+  const [editFormData, setEditFormData] = useState({ hours: '8', schedule: '' });
+
+  const longPressTimer = useRef(null);
+  const longPressDelay = 500; // 500ms para activar long press
 
   const scheduleOptions = {
     '4': ['8am-12pm', '1pm-5pm', '2pm-6pm'],
@@ -59,11 +64,20 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     return (dayOfWeek === 0 || dayOfWeek === 6) ? 5000 : 2400;
   };
 
-  //  Obtener horas por defecto según tipo de día
+  // Obtener horas por defecto según tipo de día
   const getDefaultHours = (dateString) => {
     const date = new Date(dateString + 'T00:00:00');
     const dayOfWeek = date.getDay();
     return (dayOfWeek === 0 || dayOfWeek === 6) ? '5' : '8';
+  };
+
+  // Obtener horario por defecto según tipo de día
+  const getDefaultSchedule = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    // Lunes a viernes: 7am-4:30pm
+    // Sábados y domingos: 8am-1pm
+    return (dayOfWeek === 0 || dayOfWeek === 6) ? '8am-1pm' : '7am-4:30pm';
   };
 
   // Toggle selección de fecha
@@ -76,13 +90,14 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
         setDayDetails(newDayDetails);
         return prev.filter(d => d !== date);
       } else {
-        // Agregar día con valores por defecto
+        // Agregar día con valores por defecto (incluyendo horario automático)
         const defaultHours = getDefaultHours(date);
+        const defaultSchedule = getDefaultSchedule(date);
         setDayDetails(prev => ({
           ...prev,
           [date]: {
             hours: defaultHours,
-            schedule: ''
+            schedule: defaultSchedule
           }
         }));
         return [...prev, date];
@@ -97,7 +112,7 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     available.forEach(date => {
       newDayDetails[date] = {
         hours: getDefaultHours(date),
-        schedule: ''
+        schedule: getDefaultSchedule(date)
       };
     });
     setDayDetails(newDayDetails);
@@ -110,24 +125,60 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
     setDayDetails({});
   };
 
-  // Actualizar detalles de un día específico
-  const handleDayDetailChange = (date, field, value) => {
-    setDayDetails(prev => ({
-      ...prev,
-      [date]: {
-        ...prev[date],
-        [field]: value,
-        ...(field === 'hours' && { schedule: '' }) // Reset schedule si cambian horas
-      }
-    }));
-  };
-
   // Remover un día de la selección
   const handleRemoveDay = (date) => {
     setSelectedDates(prev => prev.filter(d => d !== date));
     const newDayDetails = { ...dayDetails };
     delete newDayDetails[date];
     setDayDetails(newDayDetails);
+  };
+
+  // Long press handlers
+  const handleLongPressStart = (date) => {
+    longPressTimer.current = setTimeout(() => {
+      openEditModal(date);
+    }, longPressDelay);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  // Abrir modal de edición para un día específico
+  const openEditModal = (date) => {
+    const details = dayDetails[date];
+    setEditingDay(date);
+    setEditFormData({
+      hours: details.hours,
+      schedule: details.schedule
+    });
+  };
+
+  // Cerrar modal
+  const closeEditModal = () => {
+    setEditingDay(null);
+    setEditFormData({ hours: '8', schedule: '' });
+  };
+
+  // Guardar cambios del modal
+  const handleSaveEdit = () => {
+    if (!editFormData.schedule) {
+      alert('Selecciona un horario');
+      return;
+    }
+
+    setDayDetails(prev => ({
+      ...prev,
+      [editingDay]: {
+        hours: editFormData.hours,
+        schedule: editFormData.schedule
+      }
+    }));
+
+    closeEditModal();
   };
 
   const handleSubmit = (e) => {
@@ -140,13 +191,6 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
 
     if (!branch) {
       alert('Selecciona una sucursal');
-      return;
-    }
-
-    // Validar que todos los días tengan horario
-    const missingSchedule = selectedDates.some(date => !dayDetails[date]?.schedule);
-    if (missingSchedule) {
-      alert('Completa el horario para todos los días seleccionados');
       return;
     }
 
@@ -248,51 +292,44 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
           {selectedDates.length > 0 && (
             <>
               <div className="selected-days-section">
-                <h3>✏️ Edita las horas de cada día:</h3>
+                <h3>📋 Días seleccionados <span className="hint-text">(mantén presionado para editar)</span></h3>
                 <div className="selected-days-list">
                   {selectedDates.map(date => {
                     const { text, isWeekend } = formatDateOption(date);
-                    const details = dayDetails[date] || { hours: '8', schedule: '' };
+                    const details = dayDetails[date] || { hours: '8', schedule: '7am-4:30pm' };
 
                     return (
-                      <div key={date} className={`selected-day-card ${isWeekend ? 'weekend' : ''}`}>
+                      <div
+                        key={date}
+                        className={`selected-day-card ${isWeekend ? 'weekend' : ''}`}
+                        onMouseDown={() => handleLongPressStart(date)}
+                        onMouseUp={handleLongPressEnd}
+                        onMouseLeave={handleLongPressEnd}
+                        onTouchStart={() => handleLongPressStart(date)}
+                        onTouchEnd={handleLongPressEnd}
+                        onTouchCancel={handleLongPressEnd}
+                      >
                         <div className="day-card-header">
                           <span className="day-name-selected">{text}</span>
                           <button
                             type="button"
                             className="btn-remove-day"
                             onClick={() => handleRemoveDay(date)}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                           >
                             ✕
                           </button>
                         </div>
 
-                        <div className="day-card-inputs">
-                          <div className="day-input-group">
-                            <label>⏰ Horas:</label>
-                            <select
-                              value={details.hours}
-                              onChange={(e) => handleDayDetailChange(date, 'hours', e.target.value)}
-                              required
-                            >
-                              {Object.keys(scheduleOptions).map(hours => (
-                                <option key={hours} value={hours}>{hours}h</option>
-                              ))}
-                            </select>
+                        <div className="day-card-info">
+                          <div className="info-row">
+                            <span className="info-label">⏰ Horas:</span>
+                            <span className="info-value">{details.hours}h</span>
                           </div>
-
-                          <div className="day-input-group">
-                            <label>🕐 Horario:</label>
-                            <select
-                              value={details.schedule}
-                              onChange={(e) => handleDayDetailChange(date, 'schedule', e.target.value)}
-                              required
-                            >
-                              <option value="">Seleccionar...</option>
-                              {scheduleOptions[details.hours]?.map(schedule => (
-                                <option key={schedule} value={schedule}>{schedule}</option>
-                              ))}
-                            </select>
+                          <div className="info-row">
+                            <span className="info-label">🕐 Horario:</span>
+                            <span className="info-value">{details.schedule}</span>
                           </div>
                         </div>
 
@@ -351,6 +388,62 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
             </>
           )}
         </form>
+      )}
+
+      {/* Modal de edición */}
+      {editingDay && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Editar día</h3>
+              <button className="modal-close" onClick={closeEditModal}>✕</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-day-name">
+                {formatDateOption(editingDay).text}
+              </div>
+
+              <div className="modal-form-group">
+                <label>⏰ Horas:</label>
+                <select
+                  value={editFormData.hours}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, hours: e.target.value, schedule: '' }))}
+                >
+                  {Object.keys(scheduleOptions).map(hours => (
+                    <option key={hours} value={hours}>{hours}h</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-form-group">
+                <label>🕐 Horario:</label>
+                <select
+                  value={editFormData.schedule}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, schedule: e.target.value }))}
+                >
+                  <option value="">Seleccionar...</option>
+                  {scheduleOptions[editFormData.hours]?.map(schedule => (
+                    <option key={schedule} value={schedule}>{schedule}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-total">
+                Total: ₡{(parseFloat(editFormData.hours) * getHourlyRate(editingDay)).toLocaleString('es-CR')}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-modal-cancel" onClick={closeEditModal}>
+                Cancelar
+              </button>
+              <button className="btn-modal-save" onClick={handleSaveEdit}>
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
