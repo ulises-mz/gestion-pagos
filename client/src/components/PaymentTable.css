@@ -1,31 +1,166 @@
 .payment-table-container {
   background: white;
   border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .payment-table-container h2 {
   margin-top: 0;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   color: #333;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
 }
 
 .payment-table-empty {
   background: white;
   border-radius: 12px;
-  padding: 3rem 1.5rem;
-  margin-bottom: 2rem;
+  padding: 2rem 1.2rem;
+  margin-bottom: 1.5rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
 .payment-table-empty p {
   color: #999;
-  font-size: 1.1rem;
+  font-size: 1rem;
   margin: 0;
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.payment-card {
+  background: #f8f9ff;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.payment-card.weekend {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  border-color: #ffc9c9;
+}
+
+.payment-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.payment-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+.payment-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.day-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #667eea;
+  background: white;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+}
+
+.weekend .day-name {
+  color: #dc3545;
+}
+
+.date-num {
+  font-size: 0.95rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.payment-total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #28a745;
+}
+
+.payment-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.payment-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.detail-label {
+  font-size: 1rem;
+}
+
+.detail-value {
+  color: #555;
+  font-weight: 500;
+}
+
+.payment-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-edit-card,
+.btn-delete-card {
+  flex: 1;
+  background: white;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-card:hover {
+  background: #667eea;
+  color: white;
+}
+
+.btn-delete-card {
+  border-color: #dc3545;
+  color: #dc3545;
+  flex: 0 0 auto;
+  padding: 0.6rem 0.8rem;
+}
+
+.btn-delete-card:hover {
+  background: #dc3545;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .payment-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .payment-total {
+    align-self: flex-end;
+  }
 }
 
 .table-wrapper {

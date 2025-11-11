@@ -4,18 +4,30 @@ Sistema web para gestionar y registrar pagos quincenales desarrollado con React 
 
 ## 🚀 Características
 
-- ✅ Configuración de período de pago (fecha inicio y fin)
-- ✅ Registro de pagos diarios con:
-  - Fecha
-  - Horas trabajadas
-  - Horarios predefinidos basados en horas
-  - Valor por hora en colones (₡)
-  - Sucursal
-  - Cálculo automático de totales
-- ✅ Tabla de registros con opciones de editar y eliminar
-- ✅ Resumen de totales (horas y monto)
-- ✅ Diseño responsivo (funciona en móviles y tablets)
-- ✅ Almacenamiento local (los datos se guardan en el navegador)
+- ✅ **Sistema de Quincenas con Historial**
+  - Crear y gestionar múltiples quincenas
+  - Ver quincenas anteriores
+  - Cambiar entre quincenas activas
+
+- ✅ **Registro Inteligente de Pagos**
+  - Tarifas automáticas: ₡5,000/hora (fin de semana) | ₡2,400/hora (entre semana)
+  - Solo fechas dentro del período de la quincena
+  - Horarios predefinidos según horas trabajadas
+  - Selección de sucursal
+
+- ✅ **Vista en Tarjetas Móvil-Friendly**
+  - Diseño optimizado para celular
+  - Tarjetas con código de color (fin de semana en rojo)
+  - Ordenadas por fecha (más recientes primero)
+
+- ✅ **Resumen Automático**
+  - Días trabajados / días del período
+  - Total de horas
+  - Total a pagar en colones
+
+- ✅ **Almacenamiento Local**
+  - Los datos se guardan automáticamente en tu navegador
+  - Historial completo de todas las quincenas
 
 ## 💻 Desarrollo Local
 

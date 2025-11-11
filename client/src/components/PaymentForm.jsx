@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import './PaymentForm.css';
 
-function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
+function PaymentForm({ period, onSubmit, editingPayment, onCancelEdit }) {
   const [formData, setFormData] = useState({
     date: '',
     hours: '',
     schedule: '',
-    hourlyRate: '',
     branch: ''
   });
 
@@ -21,9 +20,22 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
 
   useEffect(() => {
     if (editingPayment) {
-      setFormData(editingPayment);
+      setFormData({
+        date: editingPayment.date,
+        hours: editingPayment.hours.toString(),
+        schedule: editingPayment.schedule,
+        branch: editingPayment.branch
+      });
     }
   }, [editingPayment]);
+
+  // Calcular tarifa automática según el día
+  const getHourlyRate = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    // 0 = Domingo, 6 = Sábado
+    return (dayOfWeek === 0 || dayOfWeek === 6) ? 5000 : 2400;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,11 +50,17 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    const hours = parseFloat(formData.hours) || 0;
+    const hourlyRate = getHourlyRate(formData.date);
+    const total = hours * hourlyRate;
+
     const payment = {
-      ...formData,
-      hours: parseFloat(formData.hours) || 0,
-      hourlyRate: parseFloat(formData.hourlyRate.replace(/,/g, '')) || 0,
-      total: (parseFloat(formData.hours) || 0) * (parseFloat(formData.hourlyRate.replace(/,/g, '')) || 0)
+      date: formData.date,
+      hours: hours,
+      schedule: formData.schedule,
+      hourlyRate: hourlyRate,
+      branch: formData.branch,
+      total: total
     };
 
     onSubmit(payment);
@@ -52,7 +70,6 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
       date: '',
       hours: '',
       schedule: '',
-      hourlyRate: '',
       branch: ''
     });
   };
@@ -62,42 +79,44 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
       date: '',
       hours: '',
       schedule: '',
-      hourlyRate: '',
       branch: ''
     });
     onCancelEdit();
   };
 
-  const formatCurrency = (value) => {
-    const num = value.replace(/[^\d]/g, '');
-    return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  // Calcular el total previo
+  const calculatePreview = () => {
+    if (!formData.date || !formData.hours) return null;
+    const hours = parseFloat(formData.hours);
+    const rate = getHourlyRate(formData.date);
+    const total = hours * rate;
+    return { rate, total };
   };
 
-  const handleCurrencyChange = (e) => {
-    const formatted = formatCurrency(e.target.value);
-    setFormData(prev => ({ ...prev, hourlyRate: formatted }));
-  };
+  const preview = calculatePreview();
 
   return (
     <div className="payment-form">
-      <h2>{editingPayment ? '✏️ Editar Registro' : '➕ Agregar Registro de Pago'}</h2>
+      <h2>{editingPayment ? '✏️ Editar' : '➕ Agregar Pago'}</h2>
 
       <form onSubmit={handleSubmit}>
-        <div className="form-grid">
+        <div className="form-grid-simple">
           <div className="form-group">
-            <label htmlFor="date">Fecha:</label>
+            <label htmlFor="date">📅 Fecha:</label>
             <input
               type="date"
               id="date"
               name="date"
               value={formData.date}
               onChange={handleChange}
+              min={period.startDate}
+              max={period.endDate}
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="hours">Horas:</label>
+            <label htmlFor="hours">⏰ Horas:</label>
             <select
               id="hours"
               name="hours"
@@ -107,13 +126,13 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
             >
               <option value="">Seleccionar...</option>
               {Object.keys(scheduleOptions).map(hours => (
-                <option key={hours} value={hours}>{hours} horas</option>
+                <option key={hours} value={hours}>{hours}h</option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label htmlFor="schedule">Horario:</label>
+            <label htmlFor="schedule">🕐 Horario:</label>
             <select
               id="schedule"
               name="schedule"
@@ -127,26 +146,10 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
                 <option key={schedule} value={schedule}>{schedule}</option>
               ))}
             </select>
-            {!formData.hours && (
-              <small className="hint">Selecciona las horas primero</small>
-            )}
           </div>
 
           <div className="form-group">
-            <label htmlFor="hourlyRate">Valor x Hora (₡):</label>
-            <input
-              type="text"
-              id="hourlyRate"
-              name="hourlyRate"
-              value={formData.hourlyRate}
-              onChange={handleCurrencyChange}
-              placeholder="0,000"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="branch">Sucursal:</label>
+            <label htmlFor="branch">🏢 Sucursal:</label>
             <select
               id="branch"
               name="branch"
@@ -162,13 +165,22 @@ function PaymentForm({ onSubmit, editingPayment, onCancelEdit }) {
           </div>
         </div>
 
+        {preview && (
+          <div className="payment-preview">
+            <span className="preview-label">Tarifa:</span>
+            <span className="preview-rate">₡{preview.rate.toLocaleString('es-CR')}/hora</span>
+            <span className="preview-label">Total:</span>
+            <span className="preview-total">₡{preview.total.toLocaleString('es-CR')}</span>
+          </div>
+        )}
+
         <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingPayment ? '💾 Guardar Cambios' : '➕ Agregar Registro'}
+          <button type="submit" className="btn-submit">
+            {editingPayment ? '💾 Guardar' : '✓ Agregar'}
           </button>
           {editingPayment && (
-            <button type="button" className="btn-secondary" onClick={handleCancel}>
-              ❌ Cancelar
+            <button type="button" className="btn-cancel" onClick={handleCancel}>
+              ✕ Cancelar
             </button>
           )}
         </div>
