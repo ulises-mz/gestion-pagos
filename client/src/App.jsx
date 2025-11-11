@@ -6,7 +6,7 @@ import PaymentTable from './components/PaymentTable';
 import Summary from './components/Summary';
 
 // Configurar URL base de la API
-const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost/gestion-pagos/api';
+const API_BASE_URL = '/api';
 
 function App() {
   // Sistema de quincenas con historial
