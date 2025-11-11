@@ -35,7 +35,7 @@
 }
 
 .payment-card {
-  background: #f8f9ff;
+  background: #fff5fb;
   border-radius: 10px;
   padding: 1rem;
   transition: all 0.2s ease;
@@ -43,13 +43,13 @@
 }
 
 .payment-card.weekend {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
-  border-color: #ffc9c9;
+  background: linear-gradient(135deg, #fff0f7 0%, #ffe5f3 100%);
+  border-color: #ff9ecc;
 }
 
 .payment-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 4px 12px rgba(248, 180, 217, 0.15);
 }
 
 .payment-card-header {
@@ -70,14 +70,14 @@
 .day-name {
   font-weight: 700;
   font-size: 0.9rem;
-  color: #667eea;
+  color: #8b2053;
   background: white;
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
 }
 
 .weekend .day-name {
-  color: #dc3545;
+  color: #ff1a75;
 }
 
 .date-num {
@@ -124,8 +124,8 @@
 .btn-delete-card {
   flex: 1;
   background: white;
-  border: 2px solid #667eea;
-  color: #667eea;
+  border: 2px solid #f8b4d9;
+  color: #8b2053;
   padding: 0.6rem;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -135,7 +135,7 @@
 }
 
 .btn-edit-card:hover {
-  background: #667eea;
+  background: #f8b4d9;
   color: white;
 }
 
@@ -174,7 +174,7 @@
 }
 
 .payment-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f8b4d9 0%, #ff9ecc 100%);
   color: white;
 }
 
@@ -195,12 +195,12 @@
 }
 
 .payment-table tbody tr:hover {
-  background-color: #f8f9ff;
+  background-color: #fff5fb;
 }
 
 .total-cell {
   font-weight: 700;
-  color: #667eea;
+  color: #8b2053;
 }
 
 .actions-cell {
@@ -221,7 +221,7 @@
 }
 
 .btn-edit:hover {
-  background: #e3f2fd;
+  background: #fff0f7;
   transform: scale(1.1);
 }
 
@@ -271,7 +271,7 @@
   .payment-table td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: #667eea;
+    color: #8b2053;
   }
 
   .actions-cell {
