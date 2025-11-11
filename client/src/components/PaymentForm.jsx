@@ -83,8 +83,15 @@ function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCan
   const getDefaultBranch = (dateString) => {
     const date = new Date(dateString + 'T00:00:00');
     const dayOfWeek = date.getDay();
-    // Sábados: H. niños por defecto
-    return dayOfWeek === 6 ? 'H. niños' : '';
+    // Lunes a viernes: UNIBE
+    // Sábados: H. niños
+    // Domingos: sin asignar
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      return 'UNIBE';
+    } else if (dayOfWeek === 6) {
+      return 'H. niños';
+    }
+    return '';
   };
 
   // Toggle selección de fecha
