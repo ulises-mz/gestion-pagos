@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './PaymentForm.css';
 
-function PaymentForm({ period, onSubmit, editingPayment, onCancelEdit }) {
+function PaymentForm({ period, existingPayments, onSubmit, editingPayment, onCancelEdit }) {
   const [formData, setFormData] = useState({
     date: '',
     hours: '',
@@ -28,6 +28,48 @@ function PaymentForm({ period, onSubmit, editingPayment, onCancelEdit }) {
       });
     }
   }, [editingPayment]);
+
+  // Generar lista de días del período
+  const generatePeriodDays = () => {
+    const days = [];
+    const start = new Date(period.startDate + 'T00:00:00');
+    const end = new Date(period.endDate + 'T00:00:00');
+
+    const current = new Date(start);
+    while (current <= end) {
+      const dateString = current.toISOString().split('T')[0];
+      days.push(dateString);
+      current.setDate(current.getDate() + 1);
+    }
+
+    return days;
+  };
+
+  // Formatear fecha para mostrar
+  const formatDateOption = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+    const dayName = dayNames[date.getDay()];
+    const day = date.getDate();
+    const month = monthNames[date.getMonth()];
+
+    return `${dayName} ${day} ${month}`;
+  };
+
+  // Obtener fechas disponibles (sin registro, excepto la que se está editando)
+  const getAvailableDates = () => {
+    const allDates = generatePeriodDays();
+    const usedDates = new Set(existingPayments.map(p => p.date));
+
+    // Si estamos editando, permitir la fecha actual
+    if (editingPayment) {
+      usedDates.delete(editingPayment.date);
+    }
+
+    return allDates.filter(date => !usedDates.has(date));
+  };
 
   // Calcular tarifa automática según el día
   const getHourlyRate = (dateString) => {
@@ -94,26 +136,36 @@ function PaymentForm({ period, onSubmit, editingPayment, onCancelEdit }) {
   };
 
   const preview = calculatePreview();
+  const availableDates = getAvailableDates();
 
   return (
     <div className="payment-form">
       <h2>{editingPayment ? '✏️ Editar' : '➕ Agregar Pago'}</h2>
 
-      <form onSubmit={handleSubmit}>
-        <div className="form-grid-simple">
-          <div className="form-group">
-            <label htmlFor="date">📅 Fecha:</label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              min={period.startDate}
-              max={period.endDate}
-              required
-            />
-          </div>
+      {availableDates.length === 0 && !editingPayment ? (
+        <div className="no-dates-message">
+          ✅ Todos los días de esta quincena tienen registro
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <div className="form-grid-simple">
+            <div className="form-group">
+              <label htmlFor="date">📅 Fecha:</label>
+              <select
+                id="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Seleccionar día...</option>
+                {availableDates.map(date => (
+                  <option key={date} value={date}>
+                    {formatDateOption(date)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
           <div className="form-group">
             <label htmlFor="hours">⏰ Horas:</label>
@@ -174,17 +226,18 @@ function PaymentForm({ period, onSubmit, editingPayment, onCancelEdit }) {
           </div>
         )}
 
-        <div className="form-actions">
-          <button type="submit" className="btn-submit">
-            {editingPayment ? '💾 Guardar' : '✓ Agregar'}
-          </button>
-          {editingPayment && (
-            <button type="button" className="btn-cancel" onClick={handleCancel}>
-              ✕ Cancelar
+          <div className="form-actions">
+            <button type="submit" className="btn-submit">
+              {editingPayment ? '💾 Guardar' : '✓ Agregar'}
             </button>
-          )}
-        </div>
-      </form>
+            {editingPayment && (
+              <button type="button" className="btn-cancel" onClick={handleCancel}>
+                ✕ Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+      )}
     </div>
   );
 }

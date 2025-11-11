@@ -153,6 +153,7 @@ function App() {
           <>
             <PaymentForm
               period={{ startDate: activeQuincena.startDate, endDate: activeQuincena.endDate }}
+              existingPayments={activeQuincena.payments}
               onSubmit={handleAddPayment}
               editingPayment={editingIndex !== null ? activeQuincena.payments[editingIndex] : null}
               onCancelEdit={handleCancelEdit}

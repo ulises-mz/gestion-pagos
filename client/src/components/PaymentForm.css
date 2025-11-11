@@ -13,6 +13,16 @@
   font-size: 1.2rem;
 }
 
+.no-dates-message {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .form-grid-simple {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
