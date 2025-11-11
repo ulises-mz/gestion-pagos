@@ -1,120 +1,171 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import PeriodConfig from './components/PeriodConfig';
+import QuincenaSelector from './components/QuincenaSelector';
 import PaymentForm from './components/PaymentForm';
 import PaymentTable from './components/PaymentTable';
 import Summary from './components/Summary';
 
 function App() {
-  const [period, setPeriod] = useState({
-    startDate: '',
-    endDate: ''
-  });
-
-  const [payments, setPayments] = useState([]);
+  // Sistema de quincenas con historial
+  const [quincenas, setQuincenas] = useState([]);
+  const [activeQuincenaId, setActiveQuincenaId] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
 
-  // Cargar datos del localStorage al inicio
+  // Cargar quincenas del localStorage al inicio
   useEffect(() => {
-    const savedPeriod = localStorage.getItem('period');
-    const savedPayments = localStorage.getItem('payments');
+    const savedQuincenas = localStorage.getItem('quincenas');
+    const savedActiveId = localStorage.getItem('activeQuincenaId');
 
-    if (savedPeriod) {
-      setPeriod(JSON.parse(savedPeriod));
+    if (savedQuincenas) {
+      setQuincenas(JSON.parse(savedQuincenas));
     }
 
-    if (savedPayments) {
-      setPayments(JSON.parse(savedPayments));
+    if (savedActiveId) {
+      setActiveQuincenaId(savedActiveId);
     }
   }, []);
 
-  // Guardar período en localStorage cuando cambie
+  // Guardar quincenas en localStorage cuando cambien
   useEffect(() => {
-    if (period.startDate && period.endDate) {
-      localStorage.setItem('period', JSON.stringify(period));
+    if (quincenas.length > 0) {
+      localStorage.setItem('quincenas', JSON.stringify(quincenas));
     }
-  }, [period]);
+  }, [quincenas]);
 
-  // Guardar pagos en localStorage cuando cambien
+  // Guardar quincena activa
   useEffect(() => {
-    localStorage.setItem('payments', JSON.stringify(payments));
-  }, [payments]);
+    if (activeQuincenaId) {
+      localStorage.setItem('activeQuincenaId', activeQuincenaId);
+    }
+  }, [activeQuincenaId]);
 
-  const handlePeriodChange = (newPeriod) => {
-    setPeriod(newPeriod);
+  // Obtener quincena activa
+  const activeQuincena = quincenas.find(q => q.id === activeQuincenaId);
+
+  // Crear nueva quincena
+  const handleCreateQuincena = (startDate, endDate) => {
+    const newQuincena = {
+      id: Date.now().toString(),
+      startDate,
+      endDate,
+      payments: [],
+      createdAt: new Date().toISOString()
+    };
+
+    setQuincenas([...quincenas, newQuincena]);
+    setActiveQuincenaId(newQuincena.id);
   };
 
+  // Cambiar quincena activa
+  const handleSelectQuincena = (quincenaId) => {
+    setActiveQuincenaId(quincenaId);
+    setEditingIndex(null);
+  };
+
+  // Agregar o editar pago
   const handleAddPayment = (payment) => {
-    if (editingIndex !== null) {
-      // Editar pago existente
-      const updatedPayments = [...payments];
-      updatedPayments[editingIndex] = payment;
-      setPayments(updatedPayments);
-      setEditingIndex(null);
-    } else {
-      // Agregar nuevo pago
-      setPayments([...payments, payment]);
-    }
+    if (!activeQuincenaId) return;
+
+    const updatedQuincenas = quincenas.map(q => {
+      if (q.id === activeQuincenaId) {
+        if (editingIndex !== null) {
+          // Editar pago existente
+          const updatedPayments = [...q.payments];
+          updatedPayments[editingIndex] = payment;
+          return { ...q, payments: updatedPayments };
+        } else {
+          // Agregar nuevo pago
+          return { ...q, payments: [...q.payments, payment] };
+        }
+      }
+      return q;
+    });
+
+    setQuincenas(updatedQuincenas);
+    setEditingIndex(null);
   };
 
+  // Editar pago
   const handleEditPayment = (index) => {
     setEditingIndex(index);
   };
 
+  // Eliminar pago
   const handleDeletePayment = (index) => {
-    const updatedPayments = payments.filter((_, i) => i !== index);
-    setPayments(updatedPayments);
+    if (!activeQuincenaId) return;
+
+    const updatedQuincenas = quincenas.map(q => {
+      if (q.id === activeQuincenaId) {
+        const updatedPayments = q.payments.filter((_, i) => i !== index);
+        return { ...q, payments: updatedPayments };
+      }
+      return q;
+    });
+
+    setQuincenas(updatedQuincenas);
     if (editingIndex === index) {
       setEditingIndex(null);
     }
   };
 
+  // Cancelar edición
   const handleCancelEdit = () => {
     setEditingIndex(null);
   };
 
-  const handleClearAll = () => {
-    if (window.confirm('¿Estás seguro de que deseas borrar todos los registros?')) {
-      setPayments([]);
-      setPeriod({ startDate: '', endDate: '' });
-      localStorage.removeItem('period');
-      localStorage.removeItem('payments');
+  // Eliminar quincena
+  const handleDeleteQuincena = (quincenaId) => {
+    if (window.confirm('¿Estás seguro de eliminar esta quincena? Se perderán todos los registros.')) {
+      const updatedQuincenas = quincenas.filter(q => q.id !== quincenaId);
+      setQuincenas(updatedQuincenas);
+
+      if (activeQuincenaId === quincenaId) {
+        setActiveQuincenaId(updatedQuincenas.length > 0 ? updatedQuincenas[0].id : null);
+      }
+    }
+  };
+
+  // Cerrar quincena (archivar)
+  const handleCloseQuincena = () => {
+    if (window.confirm('¿Deseas cerrar esta quincena y crear una nueva?')) {
+      setActiveQuincenaId(null);
+      setEditingIndex(null);
     }
   };
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>📋 Sistema de Gestión de Pagos</h1>
+        <h1>💰 Gestión de Pagos</h1>
       </header>
 
       <div className="app-container">
-        <PeriodConfig
-          period={period}
-          onChange={handlePeriodChange}
-          workDays={payments.filter(p => p.hours > 0).length}
+        <QuincenaSelector
+          quincenas={quincenas}
+          activeQuincenaId={activeQuincenaId}
+          onCreateQuincena={handleCreateQuincena}
+          onSelectQuincena={handleSelectQuincena}
+          onDeleteQuincena={handleDeleteQuincena}
+          onCloseQuincena={handleCloseQuincena}
         />
 
-        <PaymentForm
-          onSubmit={handleAddPayment}
-          editingPayment={editingIndex !== null ? payments[editingIndex] : null}
-          onCancelEdit={handleCancelEdit}
-        />
+        {activeQuincena && (
+          <>
+            <PaymentForm
+              period={{ startDate: activeQuincena.startDate, endDate: activeQuincena.endDate }}
+              onSubmit={handleAddPayment}
+              editingPayment={editingIndex !== null ? activeQuincena.payments[editingIndex] : null}
+              onCancelEdit={handleCancelEdit}
+            />
 
-        <PaymentTable
-          payments={payments}
-          onEdit={handleEditPayment}
-          onDelete={handleDeletePayment}
-        />
+            <PaymentTable
+              payments={activeQuincena.payments}
+              onEdit={handleEditPayment}
+              onDelete={handleDeletePayment}
+            />
 
-        <Summary payments={payments} />
-
-        {payments.length > 0 && (
-          <div className="clear-section">
-            <button className="btn-clear" onClick={handleClearAll}>
-              🗑️ Borrar Todos los Registros
-            </button>
-          </div>
+            <Summary payments={activeQuincena.payments} period={{ startDate: activeQuincena.startDate, endDate: activeQuincena.endDate }} />
+          </>
         )}
       </div>
     </div>
